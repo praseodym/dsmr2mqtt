@@ -1,0 +1,8 @@
+[Unit]
+Description=DSMR to MQTT service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /root/dsmr.py
+Restart=on-failure
