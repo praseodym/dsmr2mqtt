@@ -5,7 +5,6 @@ from dsmr_parser.parsers import TelegramParser
 import os
 from enum import Enum
 import paho.mqtt.client as mqtt
-from dataclasses import dataclass
 
 
 class DSMR_VERSION(Enum):

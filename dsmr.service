@@ -4,5 +4,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/bin/python3 /root/dsmr.py
+ExecStart=/usr/bin/python3 /root/dsmr-mqtt/dsmr.py
 Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
