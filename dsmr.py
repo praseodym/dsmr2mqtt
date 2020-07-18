@@ -54,6 +54,10 @@ if __name__ == "__main__":
         client.publish("dsmr/CURRENT_ELECTRICITY_USAGE", float(telegram.CURRENT_ELECTRICITY_USAGE.value))
         client.publish("dsmr/CURRENT_ELECTRICITY_DELIVERY", float(telegram.CURRENT_ELECTRICITY_DELIVERY.value))
         
+        # Usage - Delivery
+        CURRENT_ELECTRICITY_DRAW = telegram.CURRENT_ELECTRICITY_USAGE.value - telegram.CURRENT_ELECTRICITY_DELIVERY.value
+        client.publish("dsmr/CURRENT_ELECTRICITY_DRAW", float(CURRENT_ELECTRICITY_DRAW))
+        
         INSTANTANEOUS_ACTIVE_POWER_POSITIVE = (telegram.INSTANTANEOUS_ACTIVE_POWER_L1_POSITIVE.value 
                                             +  telegram.INSTANTANEOUS_ACTIVE_POWER_L2_POSITIVE.value
                                             +  telegram.INSTANTANEOUS_ACTIVE_POWER_L3_POSITIVE.value)
