@@ -6,14 +6,14 @@ use dsmr5::{
 };
 
 #[derive(Debug, Default)]
-struct RawInstantaneousActivePowerAggregate {
+pub struct RawInstantaneousActivePowerAggregate {
     line1: Option<UFixedDouble>,
     line2: Option<UFixedDouble>,
     line3: Option<UFixedDouble>
 }
 
 impl RawInstantaneousActivePowerAggregate {
-    fn sum(self) -> Option<f64> {
+    pub fn sum(self) -> Option<f64> {
         *&[self.line1, self.line2, self.line3].iter().fold(Some(0.0), |acc, line|acc.map(|acc| line.as_ref().map(|line | acc + f64::from(line))).flatten())
     }
 }
