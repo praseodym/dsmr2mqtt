@@ -10,3 +10,5 @@ edition = "2018"
 dsmr5 = { path = "../dsmr5" }
 serial = "0.4.0"
 paho-mqtt = "0.9.1"
+sentry = "0.21"
+thiserror = "1.0"

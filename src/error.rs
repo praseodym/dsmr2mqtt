@@ -1,27 +1,28 @@
+use std::backtrace::Backtrace;
+
+use thiserror::Error;
+
 use paho_mqtt as mqtt;
 
-#[derive(Debug)]
-pub enum Error {
-    SerialError(serial::Error),
+#[derive(Error, Debug)]
+pub enum MyError {
+    #[error("serial connection failed")]
+    SerialError {
+        #[from]
+        source: serial::Error,
+        backtrace: Backtrace,
+    },
+
+    #[error("parsing dsmr failed")]
     DSMR5Error(dsmr5::Error),
-    MqttError(mqtt::Error),
+
+    #[error("mqtt error occured")]
+    MqttError {
+        #[from]
+        source: mqtt::Error,
+        backtrace: Backtrace,
+    },
+
+    #[error("serial readed reached unexpected end")]
     EndOfReader(),
-}
-
-impl From<serial::Error> for Error {
-    fn from(e: serial::Error) -> Self {
-        Error::SerialError(e)
-    }
-}
-
-impl From<dsmr5::Error> for Error {
-    fn from(e: dsmr5::Error) -> Self {
-        Error::DSMR5Error(e)
-    }
-}
-
-impl From<mqtt::Error> for Error {
-    fn from(e: mqtt::Error) -> Self {
-        Error::MqttError(e)
-    }
 }
