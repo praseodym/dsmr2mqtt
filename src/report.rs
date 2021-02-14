@@ -5,7 +5,6 @@ use dsmr5::{
     Line, Tariff, OBIS,
 };
 
-use mqtt::Message;
 use paho_mqtt as mqtt;
 
 #[derive(Debug, Default)]
@@ -155,11 +154,11 @@ impl Report {
         }
 
         if let Some(value) = self.instantaneous_active_power_plus {
-            messages.push(Self::build_f64_message(format!("{}/CURRENT_ELECTRICITY_POSITIVE", topic), qos, value));
+            messages.push(Self::build_f64_message(format!("{}/INSTANTANEOUS_ACTIVE_POWER_POSITIVE", topic), qos, value));
         }
 
         if let Some(value) = self.instantaneous_active_power_negative {
-            messages.push(Self::build_f64_message(format!("{}/CURRENT_ELECTRICITY_NEGATIVE", topic), qos, value));
+            messages.push(Self::build_f64_message(format!("{}/INSTANTANEOUS_ACTIVE_POWER_NEGATIVE", topic), qos, value));
         }
 
         if let Some(value) = self.hourly_gas_meter_reading {
