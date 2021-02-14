@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 dsmr5 = { path = "../dsmr5" }
 serial = "0.4.0"
+paho-mqtt = "0.9.1"

@@ -1,50 +1,41 @@
 #![feature(never_type)]
 #![feature(iter_map_while)]
 
+mod error;
 mod report;
+use error::*;
 use report::*;
 
 use dsmr5;
+use paho_mqtt as mqtt;
 use serial::core::SerialDevice;
 use std::{io::Read, time::Duration};
 
-
-#[derive(Debug)]
-enum Error {
-    SerialError(serial::Error),
-    DSMR5Error(dsmr5::Error),
-    EndOfReader(),
-}
-
-impl From<serial::Error> for Error {
-    fn from(e: serial::Error) -> Self {
-        Error::SerialError(e)
-    }
-}
-
-impl From<dsmr5::Error> for Error {
-    fn from(e: dsmr5::Error) -> Self {
-        Error::DSMR5Error(e)
-    }
-}
+const MQTT_TOPIC: &str = "dsmr";
 
 fn main() {
-    run().unwrap();
+    let host = "tcp://10.10.10.13:1883";
+    let mut client = mqtt::Client::new(host).expect("Couldn't create the mqtt client");
+    client.set_timeout(Duration::from_secs(5));
+
+    run(client).unwrap();
 }
 
-fn run() -> Result<!, Error> {
+fn run(client: mqtt::Client) -> Result<!, Error> {
+    // Open Serial
     let mut port = serial::open("/dev/ttyUSB1")?;
     port.set_timeout(Duration::from_secs(1))?;
     let reader = dsmr5::Reader::new(port.bytes().map_while(Result::ok));
 
+    // Connect to mqtt
+    client.connect(None)?;
+
     for readout in reader {
         let telegram = readout.to_telegram()?;
-
-        let f = telegram.objects().filter_map(|o| o.ok());
-
-        let report: RawReport = f.collect();
-
-        dbg!(report.active_tariff);
+        let report: Report = telegram.objects().filter_map(Result::ok).collect();
+        for msg in report.to_mqtt_messages(MQTT_TOPIC.to_owned(), 0) {
+            client.publish(msg)?;
+        }
     }
 
     // Reader should never be exhausted
