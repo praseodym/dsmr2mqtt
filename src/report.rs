@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
 
 use dsmr5::{types::OctetString, Tariff, OBIS};
-use paho_mqtt as mqtt;
+use mqtt_async_client::client::Publish;
 
 #[derive(Debug)]
 pub enum Measurement {
@@ -29,77 +29,51 @@ impl Measurement {
             _ => None,
         }
     }
+
+    // Returns the bytes of the _string_ representation of the measurement
+    fn to_vec(&self) -> Vec<u8> {
+        match self {
+            Self::ActiveTariff(Tariff::Tariff1) => "1".as_bytes().to_vec(),
+            Self::ActiveTariff(Tariff::Tariff2) => "2".as_bytes().to_vec(),
+            Self::ElectricityUsedT1(v)
+            | Self::ElectricityUsedT2(v)
+            | Self::ElectricityDeliveredT1(v)
+            | Self::ElectricityDeliveredT2(v)
+            | Self::CurrentElectricityUsage(v)
+            | Self::CurrentElectricityDelivery(v)
+            | Self::CurrentElectricityDraw(v)
+            | Self::InstantaneousActivePowerPositive(v)
+            | Self::InstantaneousActivePowerNegative(v)
+            | Self::HourlyGasMeterReading(v) => v.to_string().as_bytes().to_vec(),
+        }
+    }
+
+    fn to_topic(&self) -> &str {
+        match self {
+            Self::ActiveTariff(_) => "ELECTRICITY_ACTIVE_TARIFF",
+            Self::ElectricityUsedT1(_) => "ELECTRICITY_USED_TARIFF_1",
+            Self::ElectricityUsedT2(_) => "ELECTRICITY_USED_TARIFF_2",
+            Self::ElectricityDeliveredT1(_) => "ELECTRICITY_DELIVERED_TARIFF_1",
+            Self::ElectricityDeliveredT2(_) => "ELECTRICITY_DELIVERED_TARIFF_2",
+            Self::CurrentElectricityUsage(_) => "CURRENT_ELECTRICITY_USAGE",
+            Self::CurrentElectricityDelivery(_) => "CURRENT_ELECTRICITY_DELIVERY",
+            Self::CurrentElectricityDraw(_) => "CURRENT_ELECTRICITY_DRAW",
+            Self::InstantaneousActivePowerPositive(_) => "INSTANTANEOUS_ACTIVE_POWER_POSITIVE",
+            Self::InstantaneousActivePowerNegative(_) => "INSTANTANEOUS_ACTIVE_POWER_NEGATIVE",
+            Self::HourlyGasMeterReading(_) => "HOURLY_GAS_METER_READING",
+        }
+    }
+
+    pub fn to_mqtt_messsage(&self, prefix: &str) -> Publish {
+        Publish::new(format!("{}/{}", prefix, self.to_topic()), self.to_vec())
+    }
 }
 
 pub struct Measurements(Vec<Measurement>);
 
 impl Measurements {
-    fn build_f64_message(topic: String, qos: i32, value: f64) -> mqtt::Message {
-        mqtt::MessageBuilder::new()
-            .topic(topic)
-            .payload(format!("{}", value))
-            .qos(qos)
-            .finalize()
-    }
-
-    pub fn to_mqtt_messages(self, topic: &str, qos: i32) -> Vec<mqtt::Message> {
-        self.0
-            .into_iter()
-            .map(|m| match m {
-                Measurement::ActiveTariff(t) => {
-                    let payload = match t {
-                        Tariff::Tariff1 => "1",
-                        Tariff::Tariff2 => "2",
-                    };
-
-                    mqtt::MessageBuilder::new()
-                        .topic(format!("{}/ELECTRICITY_ACTIVE_TARIFF", topic))
-                        .payload(payload)
-                        .qos(qos)
-                        .finalize()
-                }
-                Measurement::ElectricityUsedT1(f) => {
-                    Self::build_f64_message(format!("{}/ELECTRICITY_USED_TARIFF_1", topic), qos, f)
-                }
-                Measurement::ElectricityUsedT2(f) => {
-                    Self::build_f64_message(format!("{}/ELECTRICITY_USED_TARIFF_2", topic), qos, f)
-                }
-                Measurement::ElectricityDeliveredT1(f) => Self::build_f64_message(
-                    format!("{}/ELECTRICITY_DELIVERED_TARIFF_1", topic),
-                    qos,
-                    f,
-                ),
-                Measurement::ElectricityDeliveredT2(f) => Self::build_f64_message(
-                    format!("{}/ELECTRICITY_DELIVERED_TARIFF_2", topic),
-                    qos,
-                    f,
-                ),
-                Measurement::CurrentElectricityUsage(f) => {
-                    Self::build_f64_message(format!("{}/CURRENT_ELECTRICITY_USAGE", topic), qos, f)
-                }
-                Measurement::CurrentElectricityDelivery(f) => Self::build_f64_message(
-                    format!("{}/CURRENT_ELECTRICITY_DELIVERY", topic),
-                    qos,
-                    f,
-                ),
-                Measurement::CurrentElectricityDraw(f) => {
-                    Self::build_f64_message(format!("{}/CURRENT_ELECTRICITY_DRAW", topic), qos, f)
-                }
-                Measurement::InstantaneousActivePowerPositive(f) => Self::build_f64_message(
-                    format!("{}/INSTANTANEOUS_ACTIVE_POWER_POSITIVE", topic),
-                    qos,
-                    f,
-                ),
-                Measurement::InstantaneousActivePowerNegative(f) => Self::build_f64_message(
-                    format!("{}/INSTANTANEOUS_ACTIVE_POWER_NEGATIVE", topic),
-                    qos,
-                    f,
-                ),
-                Measurement::HourlyGasMeterReading(f) => {
-                    Self::build_f64_message(format!("{}/HOURLY_GAS_METER_READING", topic), qos, f)
-                }
-            })
-            .collect()
+    pub fn to_mqtt_messages(self, prefix: String) -> Box<dyn Iterator<Item = Publish>> {
+        Box::new(self.0.into_iter().map(move |m| m.to_mqtt_messsage(&prefix)))
     }
 }
 

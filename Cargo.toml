@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 dsmr5 = { git = "https://github.com/NULLx76/dsmr5" }
 serial = "0.4.0"
-paho-mqtt = "0.9.1"
 sentry = "0.21"
 thiserror = "1.0"
+mqtt-async-client = "0.1.7"
+tokio = "*"

@@ -1,8 +1,7 @@
 use std::backtrace::Backtrace;
 
+use mqtt_async_client as mqtt;
 use thiserror::Error;
-
-use paho_mqtt as mqtt;
 
 #[derive(Error, Debug)]
 pub enum MyError {

@@ -5,9 +5,10 @@
 mod error;
 mod report;
 use error::MyError;
+use mqtt::client::Client;
 use report::*;
 
-use paho_mqtt as mqtt;
+use mqtt_async_client as mqtt;
 use serial::core::SerialDevice;
 use std::{env, io::Read, time::Duration};
 
@@ -40,7 +41,8 @@ impl Default for Config {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let _guard = sentry::init((
         "https://d28f574927f14a54bfa88a781ae298e9@sentry.xirion.net/3",
         sentry::ClientOptions {
@@ -51,34 +53,35 @@ fn main() {
 
     let cfg = Config::from_env();
 
-    let mut client =
-        mqtt::Client::new(cfg.mqtt_host.clone()).expect("Couldn't create the mqtt client");
-    client.set_timeout(Duration::from_secs(5));
+    let mut client = Client::builder()
+        .set_host("10.10.10.13".to_owned())
+        .build()
+        .expect("Failed creating mqtt client");
 
     loop {
-        if let Err(e) = run(&cfg, &client) {
+        if let Err(e) = run(&cfg, &mut client).await {
             sentry::capture_error(&e);
         }
     }
 }
 
-fn run(cfg: &Config, client: &mqtt::Client) -> Result<!, MyError> {
+async fn run(cfg: &Config, client: &mut Client) -> Result<!, MyError> {
     // Open Serial
     let mut port = serial::open("/dev/ttyUSB1")?;
     port.set_timeout(Duration::from_secs(1))?;
     let reader = dsmr5::Reader::new(port.bytes().map_while(Result::ok));
 
     // Connect to mqtt
-    client.connect(None)?;
+    client.connect().await?;
 
     for readout in reader {
         let telegram = readout.to_telegram().map_err(|e| MyError::Dsmr5Error(e))?;
         let measurements: Measurements = telegram.objects().filter_map(Result::ok).collect();
 
-        measurements
-            .to_mqtt_messages(&cfg.mqtt_topic_prefix, cfg.mqtt_qos)
-            .into_iter()
-            .try_for_each(|m| client.publish(m))?;
+        let messages = measurements.to_mqtt_messages(cfg.mqtt_topic_prefix.clone());
+        for msg in messages {
+            client.publish(&msg).await?;
+        }
     }
 
     // Reader should never be exhausted
