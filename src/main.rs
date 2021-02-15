@@ -60,6 +60,7 @@ async fn main() {
 
     loop {
         if let Err(e) = run(&cfg, &mut client).await {
+            eprintln!("Error occured: {}", &e);
             sentry::capture_error(&e);
         }
     }

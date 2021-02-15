@@ -25,14 +25,15 @@ steps:
   image: harbor.xirion.net/library/rust-gcc
   commands:
   - export CARGO_HOME="$PWD/.cargo"
-  - cargo build --release
+  - cargo build --release --frozen
 
 - name: upload artifact
   image: harbor.xirion.net/hub/plugins/s3
   settings:
     bucket: public
     source: target/release/dsmr
-    target: /artifacts/dsmr/dsmr
+    strip_prefix: target/release/
+    target: /artifacts/dsmr/
     path_style: true
     endpoint: http://192.168.0.112:9000
     acl: public-read
