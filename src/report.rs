@@ -1,7 +1,6 @@
 use std::iter::FromIterator;
 
 use dsmr5::{types::OctetString, Tariff, OBIS};
-
 use paho_mqtt as mqtt;
 
 #[derive(Debug)]
@@ -20,7 +19,7 @@ pub enum Measurement {
 }
 
 impl Measurement {
-    fn octet_to_measurement<'a>(o: OctetString<'a>) -> Option<Measurement> {
+    fn parse_tariff<'a>(o: OctetString<'a>) -> Option<Measurement> {
         let xs: Result<Vec<_>, _> = o.as_octets().collect();
         let sum: Result<u8, _> = xs.map(|v| v.into_iter().sum());
 
@@ -115,7 +114,7 @@ impl<'a> FromIterator<OBIS<'a>> for Measurements {
         for object in iter {
             match object {
                 OBIS::TariffIndicator(value) => {
-                    if let Some(m) = Measurement::octet_to_measurement(value) {
+                    if let Some(m) = Measurement::parse_tariff(value) {
                         res.push(m)
                     }
                 }
@@ -160,16 +159,16 @@ impl<'a> FromIterator<OBIS<'a>> for Measurements {
 
 #[cfg(test)]
 mod test {
-    use dsmr5::types::OctetString;
+    use super::*;
 
     #[test]
     fn test_parse_tarrif() {
         let t = OctetString::parse("(01)", 2).unwrap();
-        let octets: u8 = t.as_octets().map(|o| o.unwrap()).sum();
-        assert_eq!(1, octets);
+        let m = Measurement::parse_tariff(t).unwrap();
+        assert!(matches!(m, Measurement::ActiveTariff(Tariff::Tariff1)));
 
         let t = OctetString::parse("(02)", 2).unwrap();
-        let octets: u8 = t.as_octets().map(|o| o.unwrap()).sum();
-        assert_eq!(2, octets);
+        let m = Measurement::parse_tariff(t).unwrap();
+        assert!(matches!(m, Measurement::ActiveTariff(Tariff::Tariff2)));
     }
 }

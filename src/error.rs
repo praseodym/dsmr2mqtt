@@ -14,7 +14,7 @@ pub enum MyError {
     },
 
     #[error("parsing dsmr failed")]
-    DSMR5Error(dsmr5::Error),
+    Dsmr5Error(dsmr5::Error),
 
     #[error("mqtt error occured")]
     MqttError {

@@ -172,6 +172,7 @@ dependencies = [
 [[package]]
 name = "dsmr5"
 version = "0.1.0"
+source = "git+https://github.com/NULLx76/dsmr5#1cf788b0f830ddf9aee55b7bc86283a9f7a213bb"
 dependencies = [
  "crc16",
 ]
