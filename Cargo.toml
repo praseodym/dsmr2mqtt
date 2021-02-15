@@ -12,4 +12,7 @@ serial = "0.4.0"
 sentry = "0.21"
 thiserror = "1.0"
 mqtt-async-client = "0.1.7"
-tokio = "*"
+tokio = { version = "1", features = ["rt", "macros"] }
+
+[profile.release]
+lto = true

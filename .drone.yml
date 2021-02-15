@@ -14,13 +14,33 @@ steps:
       from_secret: MINIO_ACCESS_KEY
     secret_key:
       from_secret: MINIO_SECRET_KEY
+
 - name: test rust
   image: harbor.xirion.net/library/rust-gcc
   commands:
   - export CARGO_HOME="$PWD/.cargo"
-  - echo $CARGO_HOME
   - cargo test
 
+- name: build release
+  image: harbor.xirion.net/library/rust-gcc
+  commands:
+  - export CARGO_HOME="$PWD/.cargo"
+  - cargo build --release
+
+- name: upload artifact
+  image: harbor.xirion.net/hub/plugins/s3
+  settings:
+    bucket: public
+    source: target/release/dsmr
+    target: /artifacts/dsmr/dsmr
+    path_style: true
+    endpoint: http://192.168.0.112:9000
+    acl: public-read
+    access_key:
+      from_secret: MINIO_ACCESS_KEY
+    secret_key:
+      from_secret: MINIO_SECRET_KEY
+  
 - name: rebuild cache
   image: harbor.xirion.net/hub/plugins/s3-cache
   settings:

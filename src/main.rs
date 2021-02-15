@@ -41,7 +41,7 @@ impl Default for Config {
     }
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let _guard = sentry::init((
         "https://d28f574927f14a54bfa88a781ae298e9@sentry.xirion.net/3",
