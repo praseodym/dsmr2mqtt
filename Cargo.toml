@@ -1,6 +1,6 @@
 [package]
 name = "dsmr"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Victor Roest <victor@xirion.net>"]
 edition = "2018"
 
@@ -10,7 +10,7 @@ edition = "2018"
 dsmr5 = { git = "https://github.com/NULLx76/dsmr5" }
 serial = "0.4.0"
 thiserror = "1.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["rt", "macros"] }
 rumqttc = "0.5"
 
 [profile.release]

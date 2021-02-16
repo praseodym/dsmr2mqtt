@@ -78,7 +78,7 @@ checksum = "338089f42c427b86394a5ee60ff321da23a5c89c9d89514c829687b26359fcff"
 
 [[package]]
 name = "dsmr"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "dsmr5",
  "rumqttc",
@@ -90,7 +90,7 @@ dependencies = [
 [[package]]
 name = "dsmr5"
 version = "0.1.0"
-source = "git+https://github.com/NULLx76/dsmr5#1cf788b0f830ddf9aee55b7bc86283a9f7a213bb"
+source = "git+https://github.com/NULLx76/dsmr5#f34aca9c185956cf8f0912f893b5c107ccb97882"
 dependencies = [
  "crc16",
 ]

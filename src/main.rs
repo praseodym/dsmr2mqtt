@@ -8,9 +8,9 @@ mod mqtt;
 use error::MyError;
 use report::*;
 
-use rumqttc::{AsyncClient, MqttOptions, Transport, ConnectionError};
+use rumqttc::{AsyncClient, MqttOptions, Transport};
 use serial::core::SerialDevice;
-use tokio::{select, task::JoinHandle};
+use tokio::{io, select, task::JoinHandle};
 use std::{env, io::Read, time::Duration};
 
 struct Config {
@@ -51,14 +51,13 @@ async fn main() -> ! {
     mqttoptions.set_transport(Transport::Tcp);
     
     loop {
-        let (mut client, mut eventloop) = AsyncClient::new(mqttoptions.clone(), 10);
+        let (mut client, mut eventloop) = AsyncClient::new(mqttoptions.clone(), 12);
 
-        let eventloop: JoinHandle<Result<!, ConnectionError>> = tokio::spawn(async move {
+        let eventloop: JoinHandle<Result<!, io::Error>> = tokio::spawn(async move {
             loop {
                 let _event = eventloop.poll().await.unwrap();
             }
         });
-
 
         select! {
             handle = eventloop => {
@@ -86,10 +85,10 @@ async fn run(cfg: &Config, mut client: &mut AsyncClient) -> Result<!, MyError> {
     let reader = dsmr5::Reader::new(port.bytes().map_while(Result::ok));
 
     for readout in reader {
-        let telegram = readout.to_telegram().map_err(|e| MyError::Dsmr5Error(e))?;
+        let telegram = readout.to_telegram().map_err(MyError::Dsmr5Error)?;
         let measurements: Measurements = telegram.objects().filter_map(Result::ok).collect();
 
-        let messages = measurements.to_mqtt_messages(cfg.mqtt_topic_prefix.clone());
+        let messages = measurements.into_mqtt_messages(cfg.mqtt_topic_prefix.clone());
         for msg in messages {
             msg.send(&mut client).await?;
         }
