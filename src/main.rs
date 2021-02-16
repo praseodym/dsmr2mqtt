@@ -11,42 +11,30 @@ use report::*;
 use rumqttc::{AsyncClient, MqttOptions, Transport};
 use serial::core::SerialDevice;
 use tokio::{io, select, task::JoinHandle};
-use std::{env, io::Read, time::Duration};
+use std::{io::Read, time::Duration};
 
+#[derive(Debug, Clone)]
 struct Config {
     pub mqtt_host: String,
     pub mqtt_topic_prefix: String,
-    pub mqtt_qos: i32,
-}
-
-impl Config {
-    fn from_env() -> Self {
-        let defaults = Self::default();
-        Self {
-            mqtt_host: env::var("MQTT_HOST").unwrap_or(defaults.mqtt_host),
-            mqtt_topic_prefix: env::var("MQTT_TOPIC").unwrap_or(defaults.mqtt_topic_prefix),
-            mqtt_qos: env::var("MQTT_QOS")
-                .and_then(|v| v.parse().map_err(|_| env::VarError::NotPresent))
-                .unwrap_or(defaults.mqtt_qos),
-        }
-    }
+    pub mqtt_port: u16,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            mqtt_host: "tcp://10.10.10.13:1883".to_owned(),
+            mqtt_host: "10.10.10.13".to_owned(),
             mqtt_topic_prefix: "dsmr".to_owned(),
-            mqtt_qos: 0,
+            mqtt_port: 1883,
         }
     }
 }
 
 #[tokio::main]
 async fn main() -> ! {
-    let cfg = Config::from_env();
+    let cfg = Config::default();
 
-    let mut mqttoptions = MqttOptions::new("dsmr-reader", "10.10.10.13", 1883);
+    let mut mqttoptions = MqttOptions::new("dsmr-reader", cfg.mqtt_host.clone(), cfg.mqtt_port);
     mqttoptions.set_keep_alive(30);
     mqttoptions.set_transport(Transport::Tcp);
     
@@ -59,6 +47,7 @@ async fn main() -> ! {
             }
         });
 
+        println!("\nStarted dsmr2mqtt...\n");
         select! {
             handle = eventloop => {
                 eprintln!("Eventloop stopped: {}", handle.unwrap_err());

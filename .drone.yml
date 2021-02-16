@@ -32,7 +32,7 @@ steps:
   image: harbor.xirion.net/hub/plugins/s3
   settings:
     bucket: public
-    source: bin/dsmr
+    source: bin/*
     target: /artifacts/dsmr/
     path_style: true
     endpoint: http://192.168.0.112:9000
