@@ -1,6 +1,5 @@
 use std::backtrace::Backtrace;
 
-use mqtt_async_client as mqtt;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -18,7 +17,7 @@ pub enum MyError {
     #[error("mqtt error occured")]
     MqttError {
         #[from]
-        source: mqtt::Error,
+        source: rumqttc::ClientError,
         backtrace: Backtrace,
     },
 

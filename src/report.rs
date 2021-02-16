@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
 
 use dsmr5::{types::OctetString, Tariff, OBIS};
-use mqtt_async_client::client::Publish;
+use crate::mqtt;
 
 #[derive(Debug)]
 pub enum Measurement {
@@ -64,15 +64,15 @@ impl Measurement {
         }
     }
 
-    pub fn to_mqtt_messsage(&self, prefix: &str) -> Publish {
-        Publish::new(format!("{}/{}", prefix, self.to_topic()), self.to_vec())
+    pub fn to_mqtt_messsage(&self, prefix: &str) -> mqtt::Message {
+        mqtt::Message::new(format!("{}/{}", prefix, self.to_topic()), rumqttc::QoS::AtMostOnce, false,  self.to_vec())
     }
 }
 
 pub struct Measurements(Vec<Measurement>);
 
 impl Measurements {
-    pub fn to_mqtt_messages(self, prefix: String) -> Box<dyn Iterator<Item = Publish>> {
+    pub fn to_mqtt_messages(self, prefix: String) -> Box<dyn Iterator<Item = mqtt::Message>> {
         Box::new(self.0.into_iter().map(move |m| m.to_mqtt_messsage(&prefix)))
     }
 }
