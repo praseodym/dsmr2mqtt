@@ -8,8 +8,9 @@ mod mqtt;
 use error::MyError;
 use report::*;
 
-use rumqttc::{AsyncClient, MqttOptions, Transport};
+use rumqttc::{AsyncClient, MqttOptions, Transport, ConnectionError};
 use serial::core::SerialDevice;
+use tokio::{select, task::JoinHandle};
 use std::{env, io::Read, time::Duration};
 
 struct Config {
@@ -42,7 +43,7 @@ impl Default for Config {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ! {
     let cfg = Config::from_env();
 
     let mut mqttoptions = MqttOptions::new("dsmr-reader", "10.10.10.13", 1883);
@@ -52,21 +53,28 @@ async fn main() {
     loop {
         let (mut client, mut eventloop) = AsyncClient::new(mqttoptions.clone(), 10);
 
-        tokio::spawn(async move {
+        let eventloop: JoinHandle<Result<!, ConnectionError>> = tokio::spawn(async move {
             loop {
-                let notification = eventloop.poll().await.unwrap();
-                println!("Received = {:?}", notification);
+                let _event = eventloop.poll().await.unwrap();
             }
         });
 
-        if let Err(e) = run(&cfg, &mut client).await {
-            eprintln!("Error occured: {}", &e);
+
+        select! {
+            handle = eventloop => {
+                eprintln!("Eventloop stopped: {}", handle.unwrap_err());
+            }
+            run = run(&cfg, &mut client) => {
+                eprintln!("Encountered error running: {}", run.unwrap_err());
+            }
         }
 
+        // Cleanup before reseting
         if let Err(e) = client.disconnect().await {
             eprintln!("Error disconnecting: {}", e)
         }
 
+        // Wait a bit before retrying.
         tokio::time::sleep(Duration::from_secs(5)).await;
     }
 }

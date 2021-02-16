@@ -78,7 +78,7 @@ checksum = "338089f42c427b86394a5ee60ff321da23a5c89c9d89514c829687b26359fcff"
 
 [[package]]
 name = "dsmr"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dsmr5",
  "rumqttc",
