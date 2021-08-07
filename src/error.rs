@@ -1,5 +1,3 @@
-use std::backtrace::Backtrace;
-
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -7,8 +5,7 @@ pub enum MyError {
     #[error("serial connection failed")]
     SerialError {
         #[from]
-        source: serial::Error,
-        backtrace: Backtrace,
+        source: serial::Error
     },
 
     #[error("parsing dsmr failed")]
@@ -17,8 +14,7 @@ pub enum MyError {
     #[error("mqtt error occured")]
     MqttError {
         #[from]
-        source: rumqttc::ClientError,
-        backtrace: Backtrace,
+        source: rumqttc::ClientError
     },
 
     #[error("serial readed reached unexpected end")]
