@@ -1,13 +1,16 @@
-mod error;
-mod report;
-mod mqtt;
+use std::{fs, io::Read, time::Duration};
+use std::io::Write;
+
+use rumqttc::{AsyncClient, MqttOptions, Transport};
+use serial::SerialPort;
+use tokio::{select, task::JoinHandle};
+
 use error::MyError;
 use report::*;
 
-use rumqttc::{AsyncClient, MqttOptions, Transport};
-use tokio::{select, task::JoinHandle};
-use std::{io::Read, time::Duration};
-use serial::SerialPort;
+mod error;
+mod report;
+mod mqtt;
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -65,7 +68,7 @@ async fn main() -> ! {
 
 async fn run(cfg: &Config, mut client: &mut AsyncClient) -> Result<(), MyError> {
     // Open Serial
-    let mut port = serial::open("/dev/ttyUSB0")?;
+    let mut port = serial::open("/dev/ttyUSB1")?;
     let settings = serial::PortSettings {
         baud_rate: serial::BaudRate::Baud115200,
         char_size: serial::CharSize::Bits8,
@@ -75,11 +78,20 @@ async fn run(cfg: &Config, mut client: &mut AsyncClient) -> Result<(), MyError> 
     };
     port.configure(&settings)?;
     port.set_timeout(Duration::from_secs(10))?;
-    let reader = dsmr5::Reader::new(port.bytes().take_while(|x| x.is_ok()).map(|x| x.unwrap()));
+    let reader = dsmr5::Reader::new(port.bytes().take_while(Result::is_ok).map(Result::unwrap));
+
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(true)
+        .open("measurements.tsv")
+        .unwrap();
 
     for readout in reader {
         let telegram = readout.to_telegram().map_err(MyError::Dsmr5Error)?;
         let measurements: Measurements = telegram.objects().filter_map(Result::ok).collect();
+
+        writeln!(&mut file, "{}", &measurements.report()).unwrap();
 
         let messages = measurements.into_mqtt_messages(cfg.mqtt_topic_prefix.clone());
         for msg in messages {

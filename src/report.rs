@@ -1,7 +1,9 @@
 use std::iter::FromIterator;
 
+use chrono::Local;
+use dsmr5::{OBIS, Tariff, types::OctetString};
+
 use crate::mqtt;
-use dsmr5::{types::OctetString, Tariff, OBIS};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Measurement {
@@ -68,7 +70,7 @@ impl Measurement {
         mqtt::Message::new(
             format!("{}/{}", prefix, self.to_topic()),
             rumqttc::QoS::AtMostOnce,
-            false,
+            true,
             self.to_vec(),
         )
     }
@@ -80,6 +82,24 @@ pub struct Measurements(Vec<Measurement>);
 impl Measurements {
     pub fn into_mqtt_messages(self, prefix: String) -> Box<dyn Iterator<Item = mqtt::Message>> {
         Box::new(self.0.into_iter().map(move |m| m.to_mqtt_messsage(&prefix)))
+    }
+
+    pub fn report(&self) -> String {
+        let mut tariff: u8 = 0;
+        let mut used_t1: f64 = 0.0;
+        let mut used_t2: f64 = 0.0;
+        for m in &self.0 {
+            match m {
+                Measurement::ActiveTariff(t) => match t {
+                    Tariff::Tariff1 => tariff = 1,
+                    Tariff::Tariff2 => tariff = 2,
+                }
+                Measurement::ElectricityUsedT1(e) => used_t1 = *e,
+                Measurement::ElectricityUsedT2(e) => used_t2 = *e,
+                _ => (),
+            }
+        }
+        format!("{}\t{}\t{}\t{}", Local::now().to_rfc3339(), tariff as u8, used_t1, used_t2)
     }
 }
 
@@ -139,7 +159,7 @@ impl<'a> FromIterator<OBIS<'a>> for Measurements {
 
 #[cfg(test)]
 mod test {
-    use dsmr5::{types::UFixedDouble, Line};
+    use dsmr5::{Line, types::UFixedDouble};
 
     use super::*;
 

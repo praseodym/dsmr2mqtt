@@ -12,6 +12,7 @@ serial = "0.4.0"
 thiserror = "1.0"
 tokio = { version = "1", features = ["rt", "macros"] }
 rumqttc = "0.5"
+chrono = "0.4.19"
 
 [profile.release]
 lto = true

@@ -11,12 +11,12 @@ pub enum MyError {
     #[error("parsing dsmr failed")]
     Dsmr5Error(dsmr5::Error),
 
-    #[error("mqtt error occured")]
+    #[error("mqtt error occurred")]
     MqttError {
         #[from]
         source: rumqttc::ClientError
     },
 
-    #[error("serial readed reached unexpected end")]
+    #[error("serial reader reached unexpected end")]
     EndOfReader(),
 }
