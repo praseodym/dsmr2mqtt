@@ -5,7 +5,7 @@ pub enum MyError {
     #[error("serial connection failed")]
     SerialError {
         #[from]
-        source: serial::Error
+        source: serial::Error,
     },
 
     #[error("parsing dsmr failed")]
@@ -14,7 +14,7 @@ pub enum MyError {
     #[error("mqtt error occurred")]
     MqttError {
         #[from]
-        source: rumqttc::ClientError
+        source: rumqttc::ClientError,
     },
 
     #[error("serial reader reached unexpected end")]

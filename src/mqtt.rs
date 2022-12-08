@@ -21,7 +21,9 @@ impl Message {
         }
     }
 
-    pub async fn send(self, client: &mut rumqttc::AsyncClient) -> Result<(), rumqttc::ClientError>{
-        client.publish(self.topic, self.qos, self.retain, self.payload).await
+    pub async fn send(self, client: &mut rumqttc::AsyncClient) -> Result<(), rumqttc::ClientError> {
+        client
+            .publish(self.topic, self.qos, self.retain, self.payload)
+            .await
     }
 }

@@ -34,7 +34,7 @@ async fn main() -> ! {
     let cfg = Config::default();
 
     let mut mqttoptions = MqttOptions::new("dsmr-reader", cfg.mqtt_host.clone(), cfg.mqtt_port);
-    mqttoptions.set_keep_alive(30);
+    mqttoptions.set_keep_alive(Duration::from_secs(30));
     mqttoptions.set_transport(Transport::Tcp);
 
     loop {
