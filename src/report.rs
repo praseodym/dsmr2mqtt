@@ -1,12 +1,22 @@
 use std::iter::FromIterator;
 
-use chrono::Local;
-use dsmr5::{OBIS, Tariff, types::OctetString};
+use chrono::{DateTime, Local};
+use dsmr5::{types::OctetString, Tariff, OBIS};
+use serde::Serialize;
+use serde_with::EnumMap;
 
 use crate::mqtt;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize)]
+#[serde(remote = "Tariff")]
+pub enum TariffDef {
+    Tariff1 = 0,
+    Tariff2 = 1,
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub enum Measurement {
+    #[serde(with = "TariffDef")]
     ActiveTariff(Tariff),
     ElectricityUsedT1(f64),
     ElectricityUsedT2(f64),
@@ -76,30 +86,46 @@ impl Measurement {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Measurements(Vec<Measurement>);
+#[serde_with::serde_as]
+#[derive(Debug, PartialEq, Serialize)]
+pub struct Measurements {
+    timestamp: DateTime<Local>,
+    #[serde_as(as = "EnumMap")]
+    #[serde(flatten)]
+    measurements: Vec<Measurement>,
+}
 
 impl Measurements {
     pub fn into_mqtt_messages(self, prefix: String) -> Box<dyn Iterator<Item = mqtt::Message>> {
-        Box::new(self.0.into_iter().map(move |m| m.to_mqtt_messsage(&prefix)))
+        Box::new(
+            self.measurements
+                .into_iter()
+                .map(move |m| m.to_mqtt_messsage(&prefix)),
+        )
     }
 
     pub fn report(&self) -> String {
         let mut tariff: u8 = 0;
         let mut used_t1: f64 = 0.0;
         let mut used_t2: f64 = 0.0;
-        for m in &self.0 {
+        for m in &self.measurements {
             match m {
                 Measurement::ActiveTariff(t) => match t {
                     Tariff::Tariff1 => tariff = 1,
                     Tariff::Tariff2 => tariff = 2,
-                }
+                },
                 Measurement::ElectricityUsedT1(e) => used_t1 = *e,
                 Measurement::ElectricityUsedT2(e) => used_t2 = *e,
                 _ => (),
             }
         }
-        format!("{}\t{}\t{}\t{}", Local::now().to_rfc3339(), tariff as u8, used_t1, used_t2)
+        format!(
+            "{}\t{}\t{}\t{}",
+            Local::now().to_rfc3339(),
+            tariff as u8,
+            used_t1,
+            used_t2
+        )
     }
 }
 
@@ -153,13 +179,16 @@ impl<'a> FromIterator<OBIS<'a>> for Measurements {
         res.push(Measurement::InstantaneousActivePowerPositive(pos));
         res.push(Measurement::InstantaneousActivePowerNegative(neg));
 
-        Measurements(res)
+        Measurements {
+            timestamp: Local::now(),
+            measurements: res,
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use dsmr5::{Line, types::UFixedDouble};
+    use dsmr5::{types::UFixedDouble, Line};
 
     use super::*;
 
@@ -258,10 +287,10 @@ mod test {
 
         let actual: Measurements = obis.into_iter().collect();
 
-        assert_eq!(expected.clone().len(), actual.0.len());
+        assert_eq!(expected.clone().len(), actual.measurements.len());
 
         for item in expected {
-            actual.0.iter().any(|el| el == &item);
+            actual.measurements.iter().any(|el| el == &item);
         }
     }
 }

@@ -1,5 +1,5 @@
-use std::{fs, io::Read, time::Duration};
 use std::io::Write;
+use std::{fs, io::Read, time::Duration};
 
 use rumqttc::{AsyncClient, MqttOptions, Transport};
 use serial::SerialPort;
@@ -9,8 +9,8 @@ use error::MyError;
 use report::*;
 
 mod error;
-mod report;
 mod mqtt;
+mod report;
 
 #[derive(Debug, Clone)]
 struct Config {
@@ -36,7 +36,7 @@ async fn main() -> ! {
     let mut mqttoptions = MqttOptions::new("dsmr-reader", cfg.mqtt_host.clone(), cfg.mqtt_port);
     mqttoptions.set_keep_alive(30);
     mqttoptions.set_transport(Transport::Tcp);
-    
+
     loop {
         let (mut client, mut eventloop) = AsyncClient::new(mqttoptions.clone(), 12);
 
@@ -66,15 +66,15 @@ async fn main() -> ! {
     }
 }
 
-async fn run(cfg: &Config, mut client: &mut AsyncClient) -> Result<(), MyError> {
+async fn run(cfg: &Config, client: &mut AsyncClient) -> Result<(), MyError> {
     // Open Serial
-    let mut port = serial::open("/dev/ttyUSB1")?;
+    let mut port = serial::open("/dev/ttyDSMR")?;
     let settings = serial::PortSettings {
         baud_rate: serial::BaudRate::Baud115200,
         char_size: serial::CharSize::Bits8,
         parity: serial::Parity::ParityNone,
         stop_bits: serial::StopBits::Stop1,
-        flow_control: serial::FlowControl::FlowNone
+        flow_control: serial::FlowControl::FlowNone,
     };
     port.configure(&settings)?;
     port.set_timeout(Duration::from_secs(10))?;
@@ -86,17 +86,23 @@ async fn run(cfg: &Config, mut client: &mut AsyncClient) -> Result<(), MyError> 
         .append(true)
         .open("measurements.tsv")
         .unwrap();
+    let measurements_topic = format!("{}/{}", cfg.mqtt_topic_prefix.clone(), "measurements");
 
     for readout in reader {
         let telegram = readout.to_telegram().map_err(MyError::Dsmr5Error)?;
         let measurements: Measurements = telegram.objects().filter_map(Result::ok).collect();
 
         writeln!(&mut file, "{}", &measurements.report()).unwrap();
+        let json = serde_json::to_string(&measurements).unwrap();
 
         let messages = measurements.into_mqtt_messages(cfg.mqtt_topic_prefix.clone());
         for msg in messages {
-            msg.send(&mut client).await?;
+            msg.send(client).await?;
         }
+
+        mqtt::Message::new(&measurements_topic, rumqttc::QoS::AtMostOnce, true, json)
+            .send(client)
+            .await?;
     }
 
     // Reader should never be exhausted
