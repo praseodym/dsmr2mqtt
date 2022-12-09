@@ -100,7 +100,7 @@ async fn run(cfg: &Config, client: &mut AsyncClient) -> Result<(), MyError> {
             msg.send(client).await?;
         }
 
-        mqtt::Message::new(&measurements_topic, rumqttc::QoS::AtMostOnce, true, json)
+        mqtt::Message::new(&measurements_topic, rumqttc::QoS::AtLeastOnce, true, json)
             .send(client)
             .await?;
     }
